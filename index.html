@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Plateforme documentaire Master ADEPP — UCAD Dakar" />
+  <title>Doc ADEPP</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono&display=swap" rel="stylesheet" />
+
+  <!-- JSZip pour téléchargement de dossiers -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
+
+  <style>
+    /* ===== RESET ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    img, video, canvas, svg { display: block; max-width: 100%; }
+    input, button, textarea, select { font: inherit; }
+    p, h1, h2, h3, h4, h5, h6 { overflow-wrap: break-word; }
+
+    /* ===== DESIGN SYSTEM — Variables ===== */
+    :root {
+      --color-primary: #1A3A6B;
+      --color-primary-light: #2B5EA7;
+      --color-primary-dark: #0F2240;
+      --color-accent: #C9892E;
+      --color-accent-light: #E8A84A;
+
+      --color-bg: #F7F8FC;
+      --color-surface: #FFFFFF;
+      --color-surface-2: #EEF1F8;
+      --color-surface-hover: #E4E9F5;
+      --color-border: #D8DDED;
+      --color-border-focus: var(--color-primary-light);
+
+      --color-text: #1C2340;
+      --color-text-muted: #6B7280;
+      --color-text-inverse: #FFFFFF;
+
+      --color-success: #22C55E;
+      --color-warning: #F97316;
+      --color-error: #EF4444;
+      --color-info: #3B82F6;
+
+      --color-event-devoir: #EF4444;
+      --color-event-rendu: #F97316;
+      --color-event-cours: #22C55E;
+      --color-event-conference: #3B82F6;
+      --color-event-soutenance: #A855F7;
+      --color-event-autre: #6B7280;
+
+      --font-base: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-mono: 'DM Mono', monospace;
+
+      --text-xs: 0.75rem;
+      --text-sm: 0.875rem;
+      --text-base: 1rem;
+      --text-lg: 1.125rem;
+      --text-xl: 1.25rem;
+      --text-2xl: 1.5rem;
+      --text-3xl: 2rem;
+
+      --weight-normal: 400;
+      --weight-medium: 500;
+      --weight-semibold: 600;
+      --weight-bold: 700;
+      --weight-extrabold: 800;
+
+      --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+      --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+      --space-12: 48px; --space-16: 64px;
+
+      --radius-sm: 6px; --radius-md: 10px; --radius-lg: 16px;
+      --radius-xl: 24px; --radius-full: 9999px;
+
+      --shadow-xs: 0 1px 2px rgba(26,58,107,0.06);
+      --shadow-sm: 0 1px 3px rgba(26,58,107,0.08), 0 1px 2px rgba(26,58,107,0.04);
+      --shadow-md: 0 4px 6px rgba(26,58,107,0.07), 0 2px 4px rgba(26,58,107,0.04);
+      --shadow-lg: 0 10px 15px rgba(26,58,107,0.10), 0 4px 6px rgba(26,58,107,0.05);
+      --shadow-xl: 0 20px 25px rgba(26,58,107,0.12), 0 10px 10px rgba(26,58,107,0.04);
+
+      --transition-fast: 150ms ease;
+      --transition-base: 250ms ease;
+      --transition-slow: 350ms ease;
+
+      --sidebar-width: 280px;
+      --header-height: 64px;
+      --z-sidebar: 100;
+      --z-header: 200;
+      --z-modal: 300;
+      --z-toast: 400;
+    }
+
+    /* Mode sombre */
+    [data-theme="dark"] {
+      --color-bg: #0F1629;
+      --color-surface: #1A2540;
+      --color-surface-2: #1E2D4E;
+      --color-surface-hover: #243358;
+      --color-border: #2D3D65;
+      --color-text: #E8EDF5;
+      --color-text-muted: #8899BB;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+      --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+      --shadow-xl: 0 20px 25px rgba(0,0,0,0.6);
+    }
+
+    /* ===== BASE ===== */
+    body {
+      font-family: var(--font-base);
+      font-size: var(--text-base);
+      color: var(--color-text);
+      background: var(--color-bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== LAYOUT ===== */
+    .app-layout {
+      display: grid;
+      grid-template-areas: "header header" "sidebar main";
+      grid-template-columns: var(--sidebar-width) 1fr;
+      grid-template-rows: var(--header-height) 1fr;
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    .app-header {
+      grid-area: header;
+      display: flex;
+      align-items: center;
+      gap: var(--space-4);
+      padding: 0 var(--space-6);
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      z-index: var(--z-header);
+      position: sticky;
+      top: 0;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-size: var(--text-xl);
+      font-weight: var(--weight-extrabold);
+      color: var(--color-primary);
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .header-logo svg { flex-shrink: 0; }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: var(--space-2);
+      color: var(--color-text);
+      border-radius: var(--radius-sm);
+    }
+    .menu-toggle:hover { background: var(--color-surface-hover); }
+
+    .header-search {
+      flex: 1;
+      max-width: 400px;
+      margin-left: auto;
+      position: relative;
+    }
+    .header-search input {
+      width: 100%;
+      padding: var(--space-2) var(--space-4) var(--space-2) var(--space-10);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-full);
+      background: var(--color-surface-2);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .header-search input::placeholder { color: var(--color-text-muted); }
+    .header-search input:focus {
+      outline: none;
+      border-color: var(--color-primary-light);
+      box-shadow: 0 0 0 3px rgba(43,94,167,0.15);
+    }
+    .header-search .search-icon {
+      position: absolute;
+      left: var(--space-3);
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      pointer-events: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    /* ===== SIDEBAR ===== */
+    .app-sidebar {
+      grid-area: sidebar;
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-border);
+      padding: var(--space-4) 0;
+      overflow-y: auto;
+      position: sticky;
+      top: var(--header-height);
+      height: calc(100vh - var(--header-height));
+    }
+
+    .sidebar-nav { display: flex; flex-direction: column; gap: var(--space-1); padding: 0 var(--space-3); }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      border-radius: var(--radius-md);
+      color: var(--color-text-muted);
+      font-weight: var(--weight-medium);
+      font-size: var(--text-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item:hover { background: var(--color-surface-hover); color: var(--color-text); }
+    .nav-item.is-active {
+      background: linear-gradient(135deg, rgba(26,58,107,0.08), rgba(43,94,167,0.12));
+      color: var(--color-primary);
+      font-weight: var(--weight-semibold);
+    }
+    .nav-item svg { flex-shrink: 0; }
+
+    .sidebar-section-title {
+      padding: var(--space-4) var(--space-4) var(--space-2);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-bold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: calc(var(--z-sidebar) - 1);
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .app-main {
+      grid-area: main;
+      padding: var(--space-6);
+      overflow-y: auto;
+    }
+
+    /* ===== BREADCRUMB ===== */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
+      font-size: var(--text-sm);
+      color: var(--color-text-muted);
+    }
+    .breadcrumb a, .breadcrumb button {
+      color: var(--color-primary-light);
+      text-decoration: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: inherit;
+      padding: 0;
+    }
+    .breadcrumb a:hover, .breadcrumb button:hover { text-decoration: underline; }
+    .breadcrumb-separator { color: var(--color-border); }
+
+    /* ===== TOOLBAR ===== */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-4);
+      margin-bottom: var(--space-6);
+      flex-wrap: wrap;
+    }
+    .toolbar-title {
+      font-size: var(--text-2xl);
+      font-weight: var(--weight-bold);
+    }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      border: 1.5px solid transparent;
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+      user-select: none;
+      text-decoration: none;
+    }
+    .btn:focus-visible { outline: 2px solid var(--color-border-focus); outline-offset: 2px; }
+
+    .btn-primary { background: var(--color-primary); color: var(--color-text-inverse); }
+    .btn-primary:hover { background: var(--color-primary-light); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+    .btn-accent { background: var(--color-accent); color: var(--color-text-inverse); }
+    .btn-accent:hover { background: var(--color-accent-light); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+    .btn-ghost { background: transparent; color: var(--color-text-muted); }
+    .btn-ghost:hover { background: var(--color-surface-hover); color: var(--color-text); }
+
+    .btn-outline { background: transparent; border-color: var(--color-border); color: var(--color-text); }
+    .btn-outline:hover { border-color: var(--color-primary-light); color: var(--color-primary); background: rgba(26,58,107,0.04); }
+
+    .btn-danger { background: var(--color-error); color: var(--color-text-inverse); }
+    .btn-danger:hover { opacity: 0.9; }
+
+    .btn-icon {
+      padding: var(--space-2);
+      border-radius: var(--radius-md);
+      background: none;
+      border: 1.5px solid transparent;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+    .btn-icon:hover { background: var(--color-surface-hover); color: var(--color-text); }
+    .btn-icon.is-active { color: var(--color-primary); background: rgba(26,58,107,0.08); }
+
+    .btn-sm { padding: var(--space-1) var(--space-3); font-size: var(--text-xs); }
+
+    /* ===== VIEW TOGGLE ===== */
+    .view-toggle {
+      display: flex;
+      background: var(--color-surface-2);
+      border-radius: var(--radius-md);
+      padding: 2px;
+    }
+    .view-toggle .btn-icon { border-radius: var(--radius-sm); }
+
+    /* ===== FOLDER GRID ===== */
+    .folder-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: var(--space-4);
+    }
+
+    .folder-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-6) var(--space-4);
+      background: var(--color-surface);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-base);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      animation: cardEnter 0.4s ease both;
+    }
+    .folder-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+    .folder-card:hover { border-color: var(--color-primary-light); box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+    .folder-card:hover::before { opacity: 1; }
+
+    .folder-icon { color: var(--color-accent); }
+    .folder-name {
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .folder-count { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+    /* Cascade animation */
+    .folder-card:nth-child(1) { animation-delay: 0ms; }
+    .folder-card:nth-child(2) { animation-delay: 30ms; }
+    .folder-card:nth-child(3) { animation-delay: 60ms; }
+    .folder-card:nth-child(4) { animation-delay: 90ms; }
+    .folder-card:nth-child(5) { animation-delay: 120ms; }
+    .folder-card:nth-child(6) { animation-delay: 150ms; }
+    .folder-card:nth-child(7) { animation-delay: 180ms; }
+    .folder-card:nth-child(8) { animation-delay: 210ms; }
+    .folder-card:nth-child(9) { animation-delay: 240ms; }
+    .folder-card:nth-child(10) { animation-delay: 270ms; }
+
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(12px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ===== FILE LIST VIEW ===== */
+    .file-list-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .file-list-table th {
+      text-align: left;
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-bold);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .file-list-table td {
+      padding: var(--space-3) var(--space-4);
+      font-size: var(--text-sm);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .file-list-table tr:last-child td { border-bottom: none; }
+    .file-list-table tbody tr { cursor: pointer; transition: background var(--transition-fast); }
+    .file-list-table tbody tr:hover { background: var(--color-surface-hover); }
+
+    .file-name-cell {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      font-weight: var(--weight-medium);
+    }
+    .file-name-cell svg { flex-shrink: 0; color: var(--color-text-muted); }
+
+    /* ===== DROP ZONE ===== */
+    .drop-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-10);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--transition-base);
+      background: var(--color-surface);
+      margin-bottom: var(--space-6);
+    }
+    .drop-zone:hover, .drop-zone.is-dragover {
+      border-color: var(--color-primary-light);
+      background: rgba(43,94,167,0.04);
+    }
+    .drop-zone.is-dragover { transform: scale(1.01); }
+    .drop-zone-icon { color: var(--color-text-muted); margin-bottom: var(--space-3); }
+    .drop-zone-text { font-size: var(--text-sm); color: var(--color-text-muted); }
+    .drop-zone-text strong { color: var(--color-primary-light); }
+
+    /* ===== CALENDAR ===== */
+    .calendar-container {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: var(--space-6);
+    }
+
+    .calendar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+    .calendar-header h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--weight-bold);
+      text-transform: capitalize;
+    }
+    .calendar-nav { display: flex; gap: var(--space-2); }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+    }
+    .calendar-day-header {
+      padding: var(--space-3);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-bold);
+      text-transform: uppercase;
+      text-align: center;
+      color: var(--color-text-muted);
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .calendar-cell {
+      min-height: 100px;
+      padding: var(--space-2);
+      border-right: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      cursor: pointer;
+      transition: background var(--transition-fast);
+      position: relative;
+    }
+    .calendar-cell:nth-child(7n) { border-right: none; }
+    .calendar-cell:hover { background: var(--color-surface-hover); }
+    .calendar-cell.is-empty { background: var(--color-surface-2); cursor: default; opacity: 0.5; }
+    .calendar-cell.is-today { background: rgba(43,94,167,0.06); }
+    .calendar-cell.is-today .day-number {
+      background: var(--color-primary);
+      color: var(--color-text-inverse);
+      border-radius: var(--radius-full);
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .day-number { font-size: var(--text-sm); font-weight: var(--weight-semibold); margin-bottom: var(--space-1); }
+    .day-events { display: flex; flex-direction: column; gap: 2px; }
+    .day-event-badge {
+      font-size: 10px;
+      padding: 1px var(--space-1);
+      border-radius: var(--radius-sm);
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+    .day-event-more {
+      font-size: 10px;
+      color: var(--color-text-muted);
+      font-weight: var(--weight-medium);
+    }
+
+    /* ===== SIDEBAR EVENTS ===== */
+    .events-sidebar {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-4);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border);
+      height: fit-content;
+      position: sticky;
+      top: calc(var(--header-height) + var(--space-6));
+    }
+    .events-sidebar h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--weight-bold);
+      margin-bottom: var(--space-4);
+    }
+
+    .event-item {
+      display: flex;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      border-radius: var(--radius-md);
+      transition: background var(--transition-fast);
+      cursor: pointer;
+      position: relative;
+    }
+    .event-item:hover { background: var(--color-surface-hover); }
+    .event-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .event-info { flex: 1; min-width: 0; }
+    .event-title { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .event-date { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .event-actions {
+      display: flex;
+      gap: var(--space-1);
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+    .event-item:hover .event-actions { opacity: 1; }
+
+    .event-filter-bar {
+      display: flex;
+      gap: var(--space-1);
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap;
+    }
+    .event-filter-chip {
+      font-size: var(--text-xs);
+      padding: var(--space-1) var(--space-2);
+      border-radius: var(--radius-full);
+      border: 1.5px solid var(--color-border);
+      background: transparent;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      color: var(--color-text-muted);
+    }
+    .event-filter-chip:hover, .event-filter-chip.is-active {
+      border-color: currentColor;
+    }
+    .event-filter-chip.is-active { font-weight: var(--weight-semibold); }
+
+    /* ===== MODAL ===== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15,22,41,0.6);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: var(--z-modal);
+      padding: var(--space-4);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-base);
+    }
+    .modal-backdrop.is-visible { opacity: 1; pointer-events: auto; }
+
+    .modal {
+      background: var(--color-surface);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      overflow-y: auto;
+      transform: scale(0.95) translateY(8px);
+      transition: transform var(--transition-base);
+    }
+    .modal-backdrop.is-visible .modal { transform: scale(1) translateY(0); }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-5) var(--space-6);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .modal-header h2 { font-size: var(--text-lg); font-weight: var(--weight-bold); }
+
+    .modal-body { padding: var(--space-6); }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-3);
+      padding: var(--space-4) var(--space-6);
+      border-top: 1px solid var(--color-border);
+    }
+
+    /* ===== FORMS ===== */
+    .form-group { margin-bottom: var(--space-4); }
+    .form-label {
+      display: block;
+      font-size: var(--text-sm);
+      font-weight: var(--weight-semibold);
+      margin-bottom: var(--space-1);
+      color: var(--color-text);
+    }
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: var(--space-2) var(--space-3);
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-md);
+      background: var(--color-surface);
+      color: var(--color-text);
+      font-size: var(--text-sm);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      outline: none;
+      border-color: var(--color-primary-light);
+      box-shadow: 0 0 0 3px rgba(43,94,167,0.15);
+    }
+    .form-textarea { min-height: 80px; resize: vertical; }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-4);
+    }
+
+    .color-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: var(--radius-full);
+      margin-right: var(--space-2);
+      vertical-align: middle;
+    }
+
+    /* ===== TOAST NOTIFICATIONS ===== */
+    .toast-container {
+      position: fixed;
+      bottom: var(--space-6);
+      right: var(--space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+      z-index: var(--z-toast);
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid var(--color-info);
+      min-width: 300px;
+      max-width: 420px;
+      animation: slideInRight 0.3s ease forwards;
+      font-size: var(--text-sm);
+    }
+    .toast-success { border-color: var(--color-success); }
+    .toast-error { border-color: var(--color-error); }
+    .toast-warning { border-color: var(--color-warning); }
+
+    .toast-close {
+      margin-left: auto;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      padding: var(--space-1);
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOutRight {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(120%); opacity: 0; }
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-16) var(--space-6);
+      color: var(--color-text-muted);
+    }
+    .empty-state svg { margin: 0 auto var(--space-4); opacity: 0.4; }
+    .empty-state p { font-size: var(--text-sm); max-width: 300px; margin: 0 auto; }
+
+    /* ===== BOTTOM NAV (mobile) ===== */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border);
+      z-index: var(--z-header);
+      padding: var(--space-1) 0;
+    }
+    .bottom-nav-items {
+      display: flex;
+      justify-content: space-around;
+    }
+    .bottom-nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: var(--space-2) var(--space-3);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--color-text-muted);
+      font-size: 10px;
+      font-weight: var(--weight-medium);
+      transition: color var(--transition-fast);
+    }
+    .bottom-nav-item.is-active { color: var(--color-primary); }
+    .bottom-nav-item:hover { color: var(--color-primary); }
+
+    /* ===== ACCESSIBILITY ===== */
+    .sr-only {
+      position: absolute;
+      width: 1px; height: 1px;
+      padding: 0; margin: -1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+    :focus-visible { outline: 2px solid var(--color-primary-light); outline-offset: 2px; border-radius: var(--radius-sm); }
+    :focus:not(:focus-visible) { outline: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .app-layout { grid-template-columns: 0 1fr; }
+      .app-sidebar {
+        position: fixed;
+        left: -100%;
+        top: var(--header-height);
+        width: var(--sidebar-width);
+        height: calc(100vh - var(--header-height));
+        transition: left var(--transition-base);
+        z-index: var(--z-sidebar);
+      }
+      .app-sidebar.is-open { left: 0; }
+      .sidebar-overlay.is-visible { display: block; }
+      .menu-toggle { display: flex; }
+      .calendar-container { grid-template-columns: 1fr; }
+      .events-sidebar { position: static; }
+    }
+
+    @media (max-width: 768px) {
+      .app-layout {
+        grid-template-areas: "header" "main";
+        grid-template-columns: 1fr;
+        grid-template-rows: var(--header-height) 1fr;
+      }
+      .app-sidebar { display: none; }
+      .bottom-nav { display: block; }
+      .app-main { padding: var(--space-4); padding-bottom: 80px; }
+      .folder-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+      .folder-card { padding: var(--space-4) var(--space-3); }
+      .header-search { display: none; }
+      .toolbar { flex-direction: column; align-items: stretch; }
+      .toolbar-actions { justify-content: space-between; }
+      .calendar-cell { min-height: 70px; }
+      .form-row { grid-template-columns: 1fr; }
+      .toast-container { left: var(--space-4); right: var(--space-4); bottom: 80px; }
+      .toast { min-width: auto; }
+    }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--color-surface-2);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-top: var(--space-2);
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      border-radius: var(--radius-full);
+      transition: width var(--transition-base);
+    }
+
+    /* ===== SETTINGS VIEW ===== */
+    .settings-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-6);
+      max-width: 600px;
+    }
+    .settings-card + .settings-card { margin-top: var(--space-4); }
+    .settings-card h3 { font-size: var(--text-lg); font-weight: var(--weight-bold); margin-bottom: var(--space-4); }
+
+    /* ===== CONFIRM DIALOG ===== */
+    .confirm-body { text-align: center; padding: var(--space-6); }
+    .confirm-body p { color: var(--color-text-muted); margin-top: var(--space-2); }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- ===== HEADER ===== -->
+    <header class="app-header" role="banner">
+      <button class="menu-toggle btn-icon" aria-label="Menu" data-action="toggle-sidebar">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <a href="#" class="header-logo" data-action="go-home">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#1A3A6B"/>
+          <path d="M8 12L16 7L24 12V22L16 27L8 22V12Z" stroke="#E8A84A" stroke-width="2" fill="none"/>
+          <circle cx="16" cy="16" r="3" fill="#E8A84A"/>
+        </svg>
+        Doc ADEPP
+      </a>
+      <div class="header-search" role="search">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="search-input" placeholder="Rechercher un fichier ou dossier..." aria-label="Rechercher" />
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" id="theme-toggle" aria-label="Changer le thème">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+        <button class="btn-icon" data-action="open-settings" aria-label="Paramètres">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="app-sidebar" aria-label="Navigation principale">
+      <nav class="sidebar-nav">
+        <button class="nav-item is-active" data-view="files">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          Documents
+        </button>
+        <button class="nav-item" data-view="calendar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Planning
+        </button>
+        <button class="nav-item" data-view="settings">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Paramètres
+        </button>
+      </nav>
+
+      <div class="sidebar-section-title">Matières</div>
+      <nav class="sidebar-nav" id="sidebar-folders-list">
+        <!-- Rempli dynamiquement -->
+      </nav>
+    </aside>
+    <div class="sidebar-overlay" data-action="close-sidebar"></div>
+
+    <!-- ===== MAIN ===== -->
+    <main class="app-main" id="main-content">
+      <!-- Contenu dynamique injecté ici -->
+    </main>
+  </div>
+
+  <!-- ===== BOTTOM NAV (mobile) ===== -->
+  <nav class="bottom-nav" aria-label="Navigation mobile">
+    <div class="bottom-nav-items">
+      <button class="bottom-nav-item is-active" data-view="files">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Docs
+      </button>
+      <button class="bottom-nav-item" data-view="calendar">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Planning
+      </button>
+      <button class="bottom-nav-item" data-view="settings">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Config
+      </button>
+    </div>
+  </nav>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+  <!-- Announcer pour accessibilité -->
+  <div id="announcer" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Modal: Créer un dossier -->
+  <div class="modal-backdrop" id="modal-create-folder" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modal-create-folder-title">
+      <div class="modal-header">
+        <h2 id="modal-create-folder-title">Nouveau dossier</h2>
+        <button class="btn-icon" data-action="close-modal" aria-label="Fermer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="folder-name-input">Nom du dossier</label>
+          <input class="form-input" id="folder-name-input" type="text" placeholder="Ex: Cours de statistique" maxlength="100" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-action="close-modal">Annuler</button>
+        <button class="btn btn-primary" id="btn-create-folder">Créer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Ajouter un événement -->
+  <div class="modal-backdrop" id="modal-add-event" hidden>
+    <div class="modal" role="dialog" aria-labelledby="modal-event-title">
+      <div class="modal-header">
+        <h2 id="modal-event-title">Nouvel événement</h2>
+        <button class="btn-icon" data-action="close-modal" aria-label="Fermer"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="event-title-input">Titre *</label>
+          <input class="form-input" id="event-title-input" type="text" placeholder="Ex: Examen final" maxlength="100" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="event-type-select">Type</label>
+          <select class="form-select" id="event-type-select">
+            <option value="devoir">Devoir / Évaluation</option>
+            <option value="rendu">Rendu de travaux</option>
+            <option value="cours">Cours / Séance</option>
+            <option value="conference">Conférence / Intervenant</option>
+            <option value="soutenance">Soutenance</option>
+            <option value="autre">Autre / Divers</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="event-start-date">Date début *</label>
+            <input class="form-input" id="event-start-date" type="date" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="event-end-date">Date fin</label>
+            <input class="form-input" id="event-end-date" type="date" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="event-start-time">Heure début</label>
+            <input class="form-input" id="event-start-time" type="time" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="event-end-time">Heure fin</label>
+            <input class="form-input" id="event-end-time" type="time" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="event-folder-select">Matière associée</label>
+          <select class="form-select" id="event-folder-select">
+            <option value="">— Aucune —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="event-description">Description</label>
+          <textarea class="form-textarea" id="event-description" placeholder="Détails de l'événement..." maxlength="500"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-action="close-modal">Annuler</button>
+        <button class="btn btn-danger" id="btn-delete-event" style="display:none;">Supprimer</button>
+        <button class="btn btn-primary" id="btn-save-event">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirmation -->
+  <div class="modal-backdrop" id="modal-confirm" hidden>
+    <div class="modal" role="alertdialog" aria-labelledby="confirm-title">
+      <div class="confirm-body">
+        <h2 id="confirm-title">Confirmer</h2>
+        <p id="confirm-message">Êtes-vous sûr ?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-action="close-modal">Annuler</button>
+        <button class="btn btn-danger" id="btn-confirm-ok">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ===================================================================
+    // Doc ADEPP — Application Principale
+    // Plateforme documentaire pour le Master ADEPP, UCAD Dakar
+    // Mode : localStorage (MVP)
+    // ===================================================================
+
+    // ===== UTILITAIRES =====
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function generateId() {
+      return crypto.randomUUID();
+    }
+
+    function formatSize(bytes) {
+      if (bytes === 0) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    }
+
+    function formatDate(isoStr) {
+      return new Date(isoStr).toLocaleDateString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      });
+    }
+
+    function formatDateTime(isoStr) {
+      return new Date(isoStr).toLocaleDateString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    }
+
+    function sanitizeFilename(name) {
+      return name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9._\- ]/g, '_')
+        .replace(/_+/g, '_');
+    }
+
+    function validateName(name) {
+      if (!name || name.trim().length === 0) return { valid: false, error: 'Le nom ne peut pas être vide' };
+      if (name.length > 100) return { valid: false, error: 'Le nom ne peut pas dépasser 100 caractères' };
+      if (/[<>:"/\\|?*\x00-\x1f]/.test(name)) return { valid: false, error: 'Le nom contient des caractères invalides' };
+      return { valid: true };
+    }
+
+    function debounce(fn, delay = 300) {
+      let timeoutId;
+      return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    function announce(message) {
+      const el = document.getElementById('announcer');
+      el.textContent = '';
+      requestAnimationFrame(() => { el.textContent = message; });
+    }
+
+    // ===== STOCKAGE =====
+
+    const Storage = {
+      get(key, defaultValue = null) {
+        try {
+          const item = localStorage.getItem(`docadepp_${key}`);
+          return item ? JSON.parse(item) : defaultValue;
+        } catch { return defaultValue; }
+      },
+      set(key, value) {
+        try {
+          localStorage.setItem(`docadepp_${key}`, JSON.stringify(value));
+          return true;
+        } catch { return false; }
+      },
+      remove(key) { localStorage.removeItem(`docadepp_${key}`); }
+    };
+
+    // ===== TYPES D'ÉVÉNEMENTS =====
+
+    const EVENT_TYPES = {
+      devoir:     { label: 'Devoir / Évaluation',     color: 'var(--color-event-devoir)',      rawColor: '#EF4444' },
+      rendu:      { label: 'Rendu de travaux',         color: 'var(--color-event-rendu)',       rawColor: '#F97316' },
+      cours:      { label: 'Cours / Séance',           color: 'var(--color-event-cours)',       rawColor: '#22C55E' },
+      conference: { label: 'Conférence / Intervenant', color: 'var(--color-event-conference)',  rawColor: '#3B82F6' },
+      soutenance: { label: 'Soutenance',               color: 'var(--color-event-soutenance)',  rawColor: '#A855F7' },
+      autre:      { label: 'Autre / Divers',           color: 'var(--color-event-autre)',       rawColor: '#6B7280' },
+    };
+
+    // ===== DOSSIERS INITIAUX =====
+
+    const DEFAULT_FOLDERS = [
+      "Droit de la commande publique",
+      "Econométrie Var Qual",
+      "Econométrie variable quantitative",
+      "Economie du développement",
+      "Economie Publique",
+      "Environnement ressources naturelles et développement",
+      "Evaluation environnementale",
+      "Evaluation qualitative",
+      "GAR",
+      "Genre et développement",
+      "L'Afrique dans la mondialisation",
+      "Maîtrise d'ouvrage",
+      "Micro-Evaluation d'impact",
+      "Microsimulation",
+      "MS Project",
+      "Passation des marchés",
+      "Plan d'orientation économique et social",
+      "Préparation de projet",
+      "Prospective",
+      "Recherche de Fonds et financement d'un projet",
+      "SIG",
+      "Techniques de Négociation"
+    ];
+
+    // ===== ÉTAT DE L'APPLICATION =====
+
+    const state = {
+      currentView: 'files',     // 'files' | 'calendar' | 'settings'
+      currentFolder: null,       // null = racine, sinon l'ID du dossier
+      folders: [],
+      files: [],
+      events: [],
+      searchQuery: '',
+      viewMode: 'grid',          // 'grid' | 'list'
+      calendarYear: new Date().getFullYear(),
+      calendarMonth: new Date().getMonth(),
+      editingEventId: null,
+      eventFilter: 'all',
+    };
+
+    // ===== INITIALISATION DES DONNÉES =====
+
+    function initData() {
+      let folders = Storage.get('folders');
+      if (!folders || folders.length === 0) {
+        folders = DEFAULT_FOLDERS.map(name => ({
+          id: generateId(),
+          name,
+          parentId: null,
+          createdAt: new Date().toISOString(),
+          createdBy: 'Système',
+        }));
+        Storage.set('folders', folders);
+      }
+      state.folders = folders;
+      state.files = Storage.get('files', []);
+      state.events = Storage.get('events', []);
+      state.viewMode = Storage.get('viewMode', 'grid');
+
+      // Thème
+      const savedTheme = Storage.get('theme', 'light');
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    }
+
+    // ===== TOAST NOTIFICATIONS =====
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const iconMap = {
+        success: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>',
+        error: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        warning: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+        info: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+      };
+      toast.innerHTML = `
+        ${iconMap[type] || iconMap.info}
+        <span>${escapeHtml(message)}</span>
+        <button class="toast-close" aria-label="Fermer">&times;</button>
+      `;
+      toast.querySelector('.toast-close').addEventListener('click', () => removeToast(toast));
+      container.appendChild(toast);
+      setTimeout(() => removeToast(toast), 4000);
+    }
+
+    function removeToast(toast) {
+      toast.style.animation = 'slideOutRight 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }
+
+    // ===== MODALS =====
+
+    let _returnFocus = null;
+
+    function openModal(id) {
+      _returnFocus = document.activeElement;
+      const backdrop = document.getElementById(id);
+      backdrop.removeAttribute('hidden');
+      requestAnimationFrame(() => {
+        backdrop.classList.add('is-visible');
+        const firstInput = backdrop.querySelector('input, select, textarea, button:not([data-action="close-modal"])');
+        firstInput?.focus();
+      });
+    }
+
+    function closeModal(id) {
+      const backdrop = document.getElementById(id);
+      backdrop.classList.remove('is-visible');
+      setTimeout(() => backdrop.setAttribute('hidden', ''), 250);
+      _returnFocus?.focus();
+    }
+
+    function closeAllModals() {
+      document.querySelectorAll('.modal-backdrop.is-visible').forEach(m => {
+        m.classList.remove('is-visible');
+        setTimeout(() => m.setAttribute('hidden', ''), 250);
+      });
+      _returnFocus?.focus();
+    }
+
+    // Confirm dialog
+    let _confirmResolve = null;
+    function showConfirm(title, message) {
+      return new Promise(resolve => {
+        _confirmResolve = resolve;
+        document.getElementById('confirm-title').textContent = title;
+        document.getElementById('confirm-message').textContent = message;
+        openModal('modal-confirm');
+      });
+    }
+
+    // ===== NAVIGATION =====
+
+    // Mot de passe pour accéder aux paramètres (haché SHA-256)
+    const SETTINGS_HASH = 'ab6782a0e8acf0ead81b09a5a03974dcca7ee6a5a1aeed4acec1e3a765e399db';
+    let settingsUnlocked = false;
+
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function promptSettingsPassword() {
+      return new Promise(resolve => {
+        const backdrop = document.getElementById('modal-confirm');
+        document.getElementById('confirm-title').textContent = 'Accès protégé';
+        document.getElementById('confirm-message').innerHTML = `
+          <div style="text-align:left;">
+            <label class="form-label" for="settings-password" style="margin-top:var(--space-4);">Mot de passe administrateur</label>
+            <input class="form-input" id="settings-password" type="password" placeholder="Entrez le mot de passe" style="margin-top:var(--space-2);" />
+            <p style="color:var(--color-text-muted); font-size:var(--text-xs); margin-top:var(--space-2);">L'accès aux paramètres est réservé à l'administrateur.</p>
+          </div>
+        `;
+        document.getElementById('btn-confirm-ok').textContent = 'Valider';
+
+        const cleanup = () => {
+          document.getElementById('btn-confirm-ok').textContent = 'Confirmer';
+          closeModal('modal-confirm');
+        };
+
+        _confirmResolve = async (confirmed) => {
+          if (confirmed) {
+            const pwd = document.getElementById('settings-password')?.value || '';
+            const hash = await hashPassword(pwd);
+            if (hash === SETTINGS_HASH) {
+              cleanup();
+              resolve(true);
+            } else {
+              showToast('Mot de passe incorrect', 'error');
+              cleanup();
+              resolve(false);
+            }
+          } else {
+            cleanup();
+            resolve(false);
+          }
+          _confirmResolve = null;
+        };
+
+        openModal('modal-confirm');
+        setTimeout(() => document.getElementById('settings-password')?.focus(), 300);
+
+        // Enter pour valider
+        const handler = async (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('settings-password')?.removeEventListener('keydown', handler);
+            if (_confirmResolve) _confirmResolve(true);
+          }
+        };
+        setTimeout(() => document.getElementById('settings-password')?.addEventListener('keydown', handler), 300);
+      });
+    }
+
+    async function navigate(view, folderId = null) {
+      // Protection par mot de passe pour les paramètres
+      if (view === 'settings' && !settingsUnlocked) {
+        const ok = await promptSettingsPassword();
+        if (!ok) return;
+        settingsUnlocked = true;
+      }
+
+      state.currentView = view;
+      state.currentFolder = folderId;
+
+      // Mettre à jour les nav items
+      document.querySelectorAll('[data-view]').forEach(el => {
+        el.classList.toggle('is-active', el.dataset.view === view);
+      });
+
+      render();
+      closeSidebar();
+    }
+
+    function closeSidebar() {
+      document.querySelector('.app-sidebar')?.classList.remove('is-open');
+      document.querySelector('.sidebar-overlay')?.classList.remove('is-visible');
+    }
+
+    // ===== RENDU PRINCIPAL =====
+
+    function render() {
+      const main = document.getElementById('main-content');
+
+      switch (state.currentView) {
+        case 'files':
+          renderFilesView(main);
+          break;
+        case 'calendar':
+          renderCalendarView(main);
+          break;
+        case 'settings':
+          renderSettingsView(main);
+          break;
+      }
+
+      renderSidebarFolders();
+    }
+
+    // ===== RENDU : EXPLORATEUR DE FICHIERS =====
+
+    function renderFilesView(container) {
+      const currentFolder = state.currentFolder
+        ? state.folders.find(f => f.id === state.currentFolder)
+        : null;
+
+      const childFolders = state.folders.filter(f =>
+        f.parentId === (state.currentFolder || null)
+      );
+
+      const filesInFolder = state.files.filter(f =>
+        f.folderId === (state.currentFolder || null)
+      );
+
+      // Filtrage par recherche
+      const query = state.searchQuery.toLowerCase();
+      const filteredFolders = query
+        ? childFolders.filter(f => f.name.toLowerCase().includes(query))
+        : childFolders;
+      const filteredFiles = query
+        ? filesInFolder.filter(f => f.name.toLowerCase().includes(query))
+        : filesInFolder;
+
+      // Fil d'Ariane
+      let breadcrumbHtml = `<button data-action="go-home" class="breadcrumb-link">Accueil</button>`;
+      if (currentFolder) {
+        const path = getFolderPath(currentFolder);
+        path.forEach((f, i) => {
+          breadcrumbHtml += `<span class="breadcrumb-separator">/</span>`;
+          if (i === path.length - 1) {
+            breadcrumbHtml += `<span>${escapeHtml(f.name)}</span>`;
+          } else {
+            breadcrumbHtml += `<button data-action="open-folder" data-folder-id="${f.id}">${escapeHtml(f.name)}</button>`;
+          }
+        });
+      }
+
+      const title = currentFolder ? escapeHtml(currentFolder ? state.folders.find(f => f.id === state.currentFolder)?.name : '') : 'Tous les dossiers';
+
+      container.innerHTML = `
+        <nav class="breadcrumb" aria-label="Fil d'Ariane">${breadcrumbHtml}</nav>
+        <div class="toolbar">
+          <h1 class="toolbar-title">${title}</h1>
+          <div class="toolbar-actions">
+            <div class="view-toggle">
+              <button class="btn-icon ${state.viewMode === 'grid' ? 'is-active' : ''}" data-action="set-view" data-mode="grid" aria-label="Vue grille">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+              </button>
+              <button class="btn-icon ${state.viewMode === 'list' ? 'is-active' : ''}" data-action="set-view" data-mode="list" aria-label="Vue liste">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </button>
+            </div>
+            <button class="btn btn-outline btn-sm" data-action="create-folder">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Nouveau dossier
+            </button>
+            ${state.currentFolder ? `
+              <button class="btn btn-primary btn-sm" data-action="upload-files">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Uploader
+              </button>
+              <button class="btn btn-accent btn-sm" data-action="download-folder" title="Télécharger le dossier en ZIP">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                ZIP
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        ${state.currentFolder ? `
+          <div class="drop-zone" id="drop-zone" role="button" tabindex="0" aria-label="Zone de dépôt de fichiers">
+            <div class="drop-zone-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <p class="drop-zone-text"><strong>Glisser-déposer</strong> vos fichiers ici ou <strong>cliquer</strong> pour sélectionner</p>
+            <p class="drop-zone-text" style="margin-top:4px; font-size:var(--text-xs)">Max 25 MB — PDF, DOCX, PPTX, XLSX, images</p>
+          </div>
+          <input type="file" id="file-input" multiple hidden />
+        ` : ''}
+
+        <div id="files-content">
+          ${renderFilesContent(filteredFolders, filteredFiles)}
+        </div>
+      `;
+
+      // Initialiser la drop zone si dans un dossier
+      if (state.currentFolder) {
+        initDropZone();
+      }
+    }
+
+    function renderFilesContent(folders, files) {
+      if (folders.length === 0 && files.length === 0) {
+        return `
+          <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <p>${state.currentFolder ? 'Ce dossier est vide. Uploadez des fichiers pour commencer.' : 'Aucun dossier trouvé.'}</p>
+          </div>
+        `;
+      }
+
+      if (state.viewMode === 'grid') {
+        return renderGridView(folders, files);
+      }
+      return renderListView(folders, files);
+    }
+
+    function renderGridView(folders, files) {
+      let html = '<div class="folder-grid">';
+
+      folders.forEach(folder => {
+        const fileCount = state.files.filter(f => f.folderId === folder.id).length;
+        html += `
+          <article class="folder-card" role="button" tabindex="0" data-action="open-folder" data-folder-id="${folder.id}" aria-label="Ouvrir ${escapeHtml(folder.name)}">
+            <div class="folder-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <h3 class="folder-name">${escapeHtml(folder.name)}</h3>
+            <span class="folder-count">${fileCount} fichier${fileCount !== 1 ? 's' : ''}</span>
+          </article>
+        `;
+      });
+
+      files.forEach(file => {
+        html += `
+          <article class="folder-card" role="button" tabindex="0" data-action="file-menu" data-file-id="${file.id}" aria-label="${escapeHtml(file.name)}">
+            <div class="folder-icon" style="color: var(--color-primary-light)">
+              ${getFileIcon(file.type)}
+            </div>
+            <h3 class="folder-name">${escapeHtml(file.name)}</h3>
+            <span class="folder-count">${formatSize(file.size)}</span>
+          </article>
+        `;
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderListView(folders, files) {
+      let html = `
+        <table class="file-list-table">
+          <thead>
+            <tr>
+              <th>Nom</th>
+              <th>Type</th>
+              <th>Taille</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      folders.forEach(folder => {
+        const fileCount = state.files.filter(f => f.folderId === folder.id).length;
+        html += `
+          <tr data-action="open-folder" data-folder-id="${folder.id}">
+            <td>
+              <div class="file-name-cell">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                ${escapeHtml(folder.name)}
+              </div>
+            </td>
+            <td>Dossier</td>
+            <td>${fileCount} fichier${fileCount !== 1 ? 's' : ''}</td>
+            <td>${formatDate(folder.createdAt)}</td>
+            <td>
+              <button class="btn-icon btn-sm" data-action="delete-folder" data-folder-id="${folder.id}" aria-label="Supprimer le dossier" title="Supprimer">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      files.forEach(file => {
+        html += `
+          <tr>
+            <td>
+              <div class="file-name-cell">
+                ${getFileIcon(file.type, 20)}
+                ${escapeHtml(file.name)}
+              </div>
+            </td>
+            <td>${file.type.split('/').pop().toUpperCase()}</td>
+            <td>${formatSize(file.size)}</td>
+            <td>${formatDate(file.uploadedAt)}</td>
+            <td>
+              <div style="display:flex; gap:4px;">
+                <button class="btn-icon btn-sm" data-action="download-file" data-file-id="${file.id}" aria-label="Télécharger" title="Télécharger">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+                <button class="btn-icon btn-sm" data-action="delete-file" data-file-id="${file.id}" aria-label="Supprimer" title="Supprimer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function getFileIcon(mimeType, size = 40) {
+      if (mimeType?.startsWith('image/')) {
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`;
+      }
+      if (mimeType?.includes('pdf')) {
+        return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+      }
+      return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>`;
+    }
+
+    function getFolderPath(folderId) {
+      const path = [];
+      let current = state.folders.find(f => f.id === folderId);
+      while (current) {
+        path.unshift(current);
+        current = current.parentId ? state.folders.find(f => f.id === current.parentId) : null;
+      }
+      return path;
+    }
+
+    // ===== DROP ZONE & UPLOAD =====
+
+    function initDropZone() {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('file-input');
+      if (!dropZone || !fileInput) return;
+
+      dropZone.addEventListener('click', () => fileInput.click());
+      dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+
+      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('is-dragover'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('is-dragover'));
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('is-dragover');
+        handleFiles(e.dataTransfer.files);
+      });
+
+      fileInput.addEventListener('change', e => {
+        handleFiles(e.target.files);
+        fileInput.value = '';
+      });
+    }
+
+    const ALLOWED_TYPES = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/msword',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.ms-excel',
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+      'text/plain', 'text/csv',
+      'application/zip',
+    ];
+    const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+    function handleFiles(fileList) {
+      const filesArray = Array.from(fileList);
+      let uploaded = 0;
+
+      filesArray.forEach(file => {
+        if (file.size > MAX_FILE_SIZE) {
+          showToast(`${file.name} dépasse 25 MB`, 'error');
+          return;
+        }
+
+        // Validation laxiste sur le type pour l'upload local
+        const reader = new FileReader();
+        reader.onload = () => {
+          const newFile = {
+            id: generateId(),
+            name: file.name,
+            folderId: state.currentFolder,
+            size: file.size,
+            type: file.type || 'application/octet-stream',
+            uploadedAt: new Date().toISOString(),
+            uploadedBy: 'Étudiant',
+            data: reader.result,  // base64 data URL
+          };
+          state.files.push(newFile);
+          Storage.set('files', state.files);
+          uploaded++;
+
+          if (uploaded === filesArray.length) {
+            showToast(`${uploaded} fichier${uploaded > 1 ? 's' : ''} uploadé${uploaded > 1 ? 's' : ''}`, 'success');
+            announce(`${uploaded} fichier${uploaded > 1 ? 's' : ''} uploadé${uploaded > 1 ? 's' : ''}`);
+            render();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ===== TÉLÉCHARGEMENT =====
+
+    function downloadFile(fileId) {
+      const file = state.files.find(f => f.id === fileId);
+      if (!file) return;
+      const a = document.createElement('a');
+      a.href = file.data;
+      a.download = file.name;
+      a.click();
+      showToast(`Téléchargement de ${file.name}`, 'success');
+    }
+
+    async function downloadFolderAsZip() {
+      if (typeof JSZip === 'undefined') {
+        showToast('JSZip non chargé. Veuillez réessayer.', 'error');
+        return;
+      }
+
+      const folderName = state.folders.find(f => f.id === state.currentFolder)?.name || 'dossier';
+      const filesInFolder = state.files.filter(f => f.folderId === state.currentFolder);
+
+      if (filesInFolder.length === 0) {
+        showToast('Ce dossier est vide', 'warning');
+        return;
+      }
+
+      showToast('Compression en cours...', 'info');
+      const zip = new JSZip();
+
+      for (const file of filesInFolder) {
+        // Extraire les données base64 du data URL
+        const base64 = file.data.split(',')[1];
+        zip.file(file.name, base64, { base64: true });
+      }
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${sanitizeFilename(folderName)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast(`${folderName}.zip téléchargé`, 'success');
+    }
+
+    // ===== RENDU : CALENDRIER =====
+
+    function renderCalendarView(container) {
+      const year = state.calendarYear;
+      const month = state.calendarMonth;
+      const monthName = new Date(year, month).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+      const cells = buildCalendarCells(year, month);
+
+      let calGridHtml = '';
+      const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      dayNames.forEach(d => { calGridHtml += `<div class="calendar-day-header">${d}</div>`; });
+
+      cells.forEach(cell => {
+        if (cell.empty) {
+          calGridHtml += `<div class="calendar-cell is-empty"></div>`;
+        } else {
+          const todayClass = cell.isToday ? ' is-today' : '';
+          let eventsHtml = '';
+          const maxShow = 3;
+          cell.events.slice(0, maxShow).forEach(ev => {
+            eventsHtml += `<div class="day-event-badge" style="background:${EVENT_TYPES[ev.type]?.rawColor || '#6B7280'}" title="${escapeHtml(ev.title)}">${escapeHtml(ev.title)}</div>`;
+          });
+          if (cell.events.length > maxShow) {
+            eventsHtml += `<div class="day-event-more">+${cell.events.length - maxShow} autre${cell.events.length - maxShow > 1 ? 's' : ''}</div>`;
+          }
+
+          calGridHtml += `
+            <div class="calendar-cell${todayClass}" data-action="calendar-day-click" data-date="${cell.dateStr}">
+              <div class="day-number">${cell.isToday ? `<span>${cell.day}</span>` : cell.day}</div>
+              <div class="day-events">${eventsHtml}</div>
+            </div>
+          `;
+        }
+      });
+
+      // Sidebar: événements à venir
+      const upcomingEvents = getUpcomingEvents();
+
+      let filterHtml = `<button class="event-filter-chip ${state.eventFilter === 'all' ? 'is-active' : ''}" data-action="filter-events" data-filter="all">Tous</button>`;
+      Object.entries(EVENT_TYPES).forEach(([key, val]) => {
+        filterHtml += `<button class="event-filter-chip ${state.eventFilter === key ? 'is-active' : ''}" data-action="filter-events" data-filter="${key}" style="color:${val.rawColor}">${val.label.split(' ')[0]}</button>`;
+      });
+
+      let eventsListHtml = '';
+      if (upcomingEvents.length === 0) {
+        eventsListHtml = '<p style="color:var(--color-text-muted); font-size:var(--text-sm); text-align:center; padding:var(--space-6) 0;">Aucun événement à venir</p>';
+      } else {
+        upcomingEvents.forEach(ev => {
+          eventsListHtml += `
+            <div class="event-item" data-action="edit-event" data-event-id="${ev.id}">
+              <div class="event-dot" style="background:${EVENT_TYPES[ev.type]?.rawColor || '#6B7280'}"></div>
+              <div class="event-info">
+                <div class="event-title">${escapeHtml(ev.title)}</div>
+                <div class="event-date">${formatDate(ev.startDate)}${ev.startTime ? ' à ' + ev.startTime : ''}</div>
+              </div>
+              <div class="event-actions">
+                <button class="btn-icon btn-sm" data-action="delete-event-quick" data-event-id="${ev.id}" aria-label="Supprimer" title="Supprimer">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      container.innerHTML = `
+        <div class="toolbar">
+          <h1 class="toolbar-title">Planning académique</h1>
+          <div class="toolbar-actions">
+            <button class="btn btn-primary btn-sm" data-action="add-event">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Ajouter un événement
+            </button>
+          </div>
+        </div>
+        <div class="calendar-container">
+          <div>
+            <div class="calendar-header">
+              <h2>${monthName}</h2>
+              <div class="calendar-nav">
+                <button class="btn-icon" data-action="prev-month" aria-label="Mois précédent">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
+                <button class="btn btn-ghost btn-sm" data-action="today-month">Aujourd'hui</button>
+                <button class="btn-icon" data-action="next-month" aria-label="Mois suivant">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="calendar-grid">${calGridHtml}</div>
+          </div>
+          <div class="events-sidebar">
+            <h3>Événements à venir</h3>
+            <div class="event-filter-bar">${filterHtml}</div>
+            <div id="events-list">${eventsListHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildCalendarCells(year, month) {
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date();
+      const startOffset = (firstDay + 6) % 7;
+
+      const cells = [];
+      for (let i = 0; i < startOffset; i++) cells.push({ empty: true });
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = state.events.filter(e => e.startDate === dateStr);
+
+        cells.push({
+          day,
+          date,
+          dateStr,
+          isToday: date.toDateString() === today.toDateString(),
+          events: dayEvents,
+        });
+      }
+
+      return cells;
+    }
+
+    function getUpcomingEvents() {
+      const today = new Date().toISOString().split('T')[0];
+      let filtered = state.events
+        .filter(e => e.startDate >= today)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+      if (state.eventFilter !== 'all') {
+        filtered = filtered.filter(e => e.type === state.eventFilter);
+      }
+
+      return filtered.slice(0, 10);
+    }
+
+    // ===== RENDU : PARAMÈTRES =====
+
+    function renderSettingsView(container) {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+
+      container.innerHTML = `
+        <div class="toolbar">
+          <h1 class="toolbar-title">Paramètres</h1>
+        </div>
+
+        <div class="settings-card">
+          <h3>Apparence</h3>
+          <div class="form-group">
+            <label class="form-label" for="theme-select">Thème</label>
+            <select class="form-select" id="theme-select">
+              <option value="light" ${currentTheme === 'light' ? 'selected' : ''}>Clair</option>
+              <option value="dark" ${currentTheme === 'dark' ? 'selected' : ''}>Sombre</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <h3>GitHub API (optionnel)</h3>
+          <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-4)">
+            Configurez un Personal Access Token pour sauvegarder les fichiers sur GitHub et permettre la collaboration.
+            Sans token, les données sont stockées localement dans votre navigateur.
+          </p>
+          <div class="form-group">
+            <label class="form-label" for="github-token">Personal Access Token</label>
+            <input class="form-input" id="github-token" type="password" placeholder="ghp_xxxxxxxxxxxx" value="${escapeHtml(Storage.get('github_pat', ''))}" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="github-repo">Repository (owner/repo)</label>
+            <input class="form-input" id="github-repo" type="text" placeholder="MoJoop/Doc_Adepp" value="${escapeHtml(Storage.get('github_repo', 'MoJoop/Doc_Adepp'))}" />
+          </div>
+          <button class="btn btn-primary" id="btn-save-github">Enregistrer la configuration</button>
+        </div>
+
+        <div class="settings-card">
+          <h3>Données</h3>
+          <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-4)">
+            Gérer les données locales de l'application.
+          </p>
+          <div style="display:flex; gap:var(--space-3); flex-wrap:wrap;">
+            <button class="btn btn-outline" id="btn-export-data">Exporter les données</button>
+            <button class="btn btn-outline" id="btn-import-data">Importer des données</button>
+            <button class="btn btn-danger" id="btn-reset-data">Réinitialiser</button>
+          </div>
+          <input type="file" id="import-data-input" accept=".json" hidden />
+        </div>
+      `;
+
+      // Event listeners pour les settings
+      document.getElementById('theme-select').addEventListener('change', e => {
+        document.documentElement.setAttribute('data-theme', e.target.value);
+        Storage.set('theme', e.target.value);
+      });
+
+      document.getElementById('btn-save-github').addEventListener('click', () => {
+        Storage.set('github_pat', document.getElementById('github-token').value);
+        Storage.set('github_repo', document.getElementById('github-repo').value);
+        showToast('Configuration GitHub sauvegardée', 'success');
+      });
+
+      document.getElementById('btn-export-data').addEventListener('click', exportData);
+      document.getElementById('btn-import-data').addEventListener('click', () => document.getElementById('import-data-input').click());
+      document.getElementById('import-data-input').addEventListener('change', importData);
+      document.getElementById('btn-reset-data').addEventListener('click', async () => {
+        const confirmed = await showConfirm('Réinitialiser ?', 'Toutes les données locales seront supprimées. Cette action est irréversible.');
+        if (confirmed) {
+          Storage.remove('folders');
+          Storage.remove('files');
+          Storage.remove('events');
+          initData();
+          render();
+          showToast('Données réinitialisées', 'success');
+        }
+      });
+    }
+
+    function exportData() {
+      const data = {
+        folders: state.folders,
+        files: state.files.map(f => ({ ...f, data: undefined })),  // Exclure les données binaires
+        events: state.events,
+        exportedAt: new Date().toISOString(),
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `doc-adepp-export-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Données exportées', 'success');
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (data.folders) { state.folders = data.folders; Storage.set('folders', data.folders); }
+          if (data.events) { state.events = data.events; Storage.set('events', data.events); }
+          render();
+          showToast('Données importées avec succès', 'success');
+        } catch {
+          showToast('Fichier invalide', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // ===== SIDEBAR FOLDERS =====
+
+    function renderSidebarFolders() {
+      const list = document.getElementById('sidebar-folders-list');
+      if (!list) return;
+
+      const rootFolders = state.folders.filter(f => f.parentId === null).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+      list.innerHTML = rootFolders.map(f => `
+        <button class="nav-item ${state.currentFolder === f.id ? 'is-active' : ''}" data-action="open-folder" data-folder-id="${f.id}" style="font-size:var(--text-xs); padding: var(--space-2) var(--space-4);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(f.name)}</span>
+        </button>
+      `).join('');
+    }
+
+    // ===== EVENT MANAGEMENT =====
+
+    function openEventModal(dateStr = null, eventId = null) {
+      state.editingEventId = eventId;
+
+      // Remplir le select des matières
+      const folderSelect = document.getElementById('event-folder-select');
+      folderSelect.innerHTML = '<option value="">— Aucune —</option>';
+      state.folders.filter(f => f.parentId === null).sort((a, b) => a.name.localeCompare(b.name, 'fr')).forEach(f => {
+        folderSelect.innerHTML += `<option value="${f.id}">${escapeHtml(f.name)}</option>`;
+      });
+
+      const titleEl = document.getElementById('modal-event-title');
+      const deleteBtn = document.getElementById('btn-delete-event');
+
+      if (eventId) {
+        // Mode édition
+        const ev = state.events.find(e => e.id === eventId);
+        if (!ev) return;
+        titleEl.textContent = 'Modifier l\'événement';
+        deleteBtn.style.display = 'inline-flex';
+        document.getElementById('event-title-input').value = ev.title;
+        document.getElementById('event-type-select').value = ev.type;
+        document.getElementById('event-start-date').value = ev.startDate;
+        document.getElementById('event-end-date').value = ev.endDate || '';
+        document.getElementById('event-start-time').value = ev.startTime || '';
+        document.getElementById('event-end-time').value = ev.endTime || '';
+        document.getElementById('event-folder-select').value = ev.folderId || '';
+        document.getElementById('event-description').value = ev.description || '';
+      } else {
+        // Mode création
+        titleEl.textContent = 'Nouvel événement';
+        deleteBtn.style.display = 'none';
+        document.getElementById('event-title-input').value = '';
+        document.getElementById('event-type-select').value = 'devoir';
+        document.getElementById('event-start-date').value = dateStr || new Date().toISOString().split('T')[0];
+        document.getElementById('event-end-date').value = '';
+        document.getElementById('event-start-time').value = '';
+        document.getElementById('event-end-time').value = '';
+        document.getElementById('event-folder-select').value = '';
+        document.getElementById('event-description').value = '';
+      }
+
+      openModal('modal-add-event');
+    }
+
+    function saveEvent() {
+      const title = document.getElementById('event-title-input').value.trim();
+      const type = document.getElementById('event-type-select').value;
+      const startDate = document.getElementById('event-start-date').value;
+      const endDate = document.getElementById('event-end-date').value;
+      const startTime = document.getElementById('event-start-time').value;
+      const endTime = document.getElementById('event-end-time').value;
+      const folderId = document.getElementById('event-folder-select').value || null;
+      const description = document.getElementById('event-description').value.trim();
+
+      if (!title) { showToast('Le titre est requis', 'error'); return; }
+      if (!startDate) { showToast('La date de début est requise', 'error'); return; }
+
+      if (state.editingEventId) {
+        // Mise à jour
+        const idx = state.events.findIndex(e => e.id === state.editingEventId);
+        if (idx >= 0) {
+          state.events[idx] = { ...state.events[idx], title, type, startDate, endDate, startTime, endTime, folderId, description };
+        }
+        showToast('Événement modifié', 'success');
+      } else {
+        // Création
+        state.events.push({
+          id: generateId(),
+          title, type, startDate, endDate, startTime, endTime,
+          description, folderId,
+          createdBy: 'Étudiant',
+          createdAt: new Date().toISOString(),
+        });
+        showToast('Événement créé', 'success');
+      }
+
+      Storage.set('events', state.events);
+      closeModal('modal-add-event');
+      state.editingEventId = null;
+      render();
+    }
+
+    function deleteEvent(eventId) {
+      state.events = state.events.filter(e => e.id !== eventId);
+      Storage.set('events', state.events);
+      showToast('Événement supprimé', 'success');
+      closeModal('modal-add-event');
+      state.editingEventId = null;
+      render();
+    }
+
+    // ===== GESTION DES DOSSIERS =====
+
+    function createFolder() {
+      const nameInput = document.getElementById('folder-name-input');
+      const name = nameInput.value.trim();
+      const validation = validateName(name);
+      if (!validation.valid) {
+        showToast(validation.error, 'error');
+        return;
+      }
+
+      // Vérifier les doublons
+      const parentId = state.currentFolder || null;
+      const existing = state.folders.find(f => f.name.toLowerCase() === name.toLowerCase() && f.parentId === parentId);
+      if (existing) {
+        showToast('Un dossier avec ce nom existe déjà', 'error');
+        return;
+      }
+
+      state.folders.push({
+        id: generateId(),
+        name,
+        parentId,
+        createdAt: new Date().toISOString(),
+        createdBy: 'Étudiant',
+      });
+
+      Storage.set('folders', state.folders);
+      closeModal('modal-create-folder');
+      nameInput.value = '';
+      showToast(`Dossier "${name}" créé`, 'success');
+      announce(`Dossier ${name} créé`);
+      render();
+    }
+
+    async function deleteFolder(folderId) {
+      const folder = state.folders.find(f => f.id === folderId);
+      if (!folder) return;
+
+      const filesInFolder = state.files.filter(f => f.folderId === folderId);
+      const confirmed = await showConfirm(
+        'Supprimer le dossier ?',
+        `"${folder.name}" et ses ${filesInFolder.length} fichier(s) seront supprimés définitivement.`
+      );
+      if (!confirmed) return;
+
+      state.files = state.files.filter(f => f.folderId !== folderId);
+      state.folders = state.folders.filter(f => f.id !== folderId);
+      Storage.set('folders', state.folders);
+      Storage.set('files', state.files);
+
+      if (state.currentFolder === folderId) {
+        state.currentFolder = null;
+      }
+
+      showToast(`Dossier "${folder.name}" supprimé`, 'success');
+      render();
+    }
+
+    async function deleteFile(fileId) {
+      const file = state.files.find(f => f.id === fileId);
+      if (!file) return;
+
+      const confirmed = await showConfirm('Supprimer le fichier ?', `"${file.name}" sera supprimé définitivement.`);
+      if (!confirmed) return;
+
+      state.files = state.files.filter(f => f.id !== fileId);
+      Storage.set('files', state.files);
+      showToast(`Fichier "${file.name}" supprimé`, 'success');
+      render();
+    }
+
+    // ===== GESTION GLOBALE DES ÉVÉNEMENTS (delegation) =====
+
+    document.addEventListener('click', e => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+
+      const action = target.dataset.action;
+
+      switch (action) {
+        case 'toggle-sidebar': {
+          const sidebar = document.querySelector('.app-sidebar');
+          const overlay = document.querySelector('.sidebar-overlay');
+          sidebar.classList.toggle('is-open');
+          overlay.classList.toggle('is-visible');
+          break;
+        }
+        case 'close-sidebar':
+          closeSidebar();
+          break;
+        case 'go-home':
+          e.preventDefault();
+          navigate('files', null);
+          break;
+        case 'open-folder':
+          navigate('files', target.dataset.folderId);
+          break;
+        case 'close-modal':
+          closeAllModals();
+          break;
+        case 'create-folder':
+          document.getElementById('folder-name-input').value = '';
+          openModal('modal-create-folder');
+          break;
+        case 'set-view': {
+          state.viewMode = target.dataset.mode;
+          Storage.set('viewMode', state.viewMode);
+          render();
+          break;
+        }
+        case 'upload-files':
+          document.getElementById('file-input')?.click();
+          break;
+        case 'download-folder':
+          downloadFolderAsZip();
+          break;
+        case 'download-file':
+          e.stopPropagation();
+          downloadFile(target.dataset.fileId);
+          break;
+        case 'delete-folder':
+          e.stopPropagation();
+          deleteFolder(target.dataset.folderId);
+          break;
+        case 'delete-file':
+          e.stopPropagation();
+          deleteFile(target.dataset.fileId);
+          break;
+        case 'file-menu':
+          downloadFile(target.dataset.fileId);
+          break;
+        case 'prev-month':
+          state.calendarMonth--;
+          if (state.calendarMonth < 0) { state.calendarMonth = 11; state.calendarYear--; }
+          render();
+          break;
+        case 'next-month':
+          state.calendarMonth++;
+          if (state.calendarMonth > 11) { state.calendarMonth = 0; state.calendarYear++; }
+          render();
+          break;
+        case 'today-month':
+          state.calendarYear = new Date().getFullYear();
+          state.calendarMonth = new Date().getMonth();
+          render();
+          break;
+        case 'calendar-day-click':
+          openEventModal(target.dataset.date);
+          break;
+        case 'add-event':
+          openEventModal();
+          break;
+        case 'edit-event':
+          openEventModal(null, target.dataset.eventId);
+          break;
+        case 'delete-event-quick': {
+          e.stopPropagation();
+          deleteEvent(target.dataset.eventId);
+          break;
+        }
+        case 'filter-events':
+          state.eventFilter = target.dataset.filter;
+          render();
+          break;
+        case 'open-settings':
+          navigate('settings');
+          break;
+      }
+    });
+
+    // Navigation par data-view
+    document.querySelectorAll('[data-view]').forEach(el => {
+      el.addEventListener('click', () => navigate(el.dataset.view));
+    });
+
+    // Boutons modaux
+    document.getElementById('btn-create-folder').addEventListener('click', createFolder);
+    document.getElementById('btn-save-event').addEventListener('click', saveEvent);
+    document.getElementById('btn-delete-event').addEventListener('click', () => {
+      if (state.editingEventId) deleteEvent(state.editingEventId);
+    });
+    document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+      closeModal('modal-confirm');
+      if (_confirmResolve) { _confirmResolve(true); _confirmResolve = null; }
+    });
+
+    // Fermer modal sur backdrop click
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.addEventListener('click', e => {
+        if (e.target === backdrop) {
+          closeAllModals();
+          if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
+        }
+      });
+    });
+
+    // Escape pour fermer les modals
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeAllModals();
+        if (_confirmResolve) { _confirmResolve(false); _confirmResolve = null; }
+      }
+    });
+
+    // Enter dans le champ "nom de dossier" -> créer
+    document.getElementById('folder-name-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') createFolder();
+    });
+
+    // Toggle thème
+    document.getElementById('theme-toggle').addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      Storage.set('theme', next);
+    });
+
+    // Recherche
+    const searchInput = document.getElementById('search-input');
+    const handleSearch = debounce(query => {
+      state.searchQuery = query;
+      if (state.currentView === 'files') render();
+    }, 300);
+    searchInput.addEventListener('input', e => handleSearch(e.target.value));
+
+    // ===== DÉMARRAGE =====
+
+    initData();
+    render();
+
+    // Keyboard navigation pour les folder cards
+    document.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('folder-card')) {
+        e.preventDefault();
+        e.target.click();
+      }
+    });
+
+  </script>
+</body>
+</html>
