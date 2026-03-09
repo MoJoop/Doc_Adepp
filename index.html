@@ -1088,8 +1088,30 @@
     // ===================================================================
     // Doc ADEPP — Application Principale
     // Plateforme documentaire pour le Master ADEPP, UCAD Dakar
-    // Mode : localStorage (MVP)
+    // Mode : Firebase (Firestore + Storage + Auth anonyme)
     // ===================================================================
+
+    // ===== FIREBASE SDK (CDN ESM) =====
+
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getFirestore, collection, doc, getDocs, addDoc, setDoc, deleteDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+    import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD4g3WTXr7wUHZoxHgU_L2-yF3VSd8X7pQ",
+      authDomain: "doc-adepp.firebaseapp.com",
+      projectId: "doc-adepp",
+      storageBucket: "doc-adepp.firebasestorage.app",
+      messagingSenderId: "456687840446",
+      appId: "1:456687840446:web:a6e949654b116cccb3c2ef",
+      measurementId: "G-E0H3JE6LJH"
+    };
+
+    const firebaseApp = initializeApp(firebaseConfig);
+    const db = getFirestore(firebaseApp);
+    const storage = getStorage(firebaseApp);
+    const auth = getAuth(firebaseApp);
 
     // ===== UTILITAIRES =====
 
@@ -1225,28 +1247,79 @@
       eventFilter: 'all',
     };
 
-    // ===== INITIALISATION DES DONNÉES =====
+    // ===== INITIALISATION DES DONNÉES (FIREBASE) =====
 
-    function initData() {
-      let folders = Storage.get('folders');
-      if (!folders || folders.length === 0) {
-        folders = DEFAULT_FOLDERS.map(name => ({
-          id: generateId(),
-          name,
-          parentId: null,
-          createdAt: new Date().toISOString(),
-          createdBy: 'Système',
-        }));
-        Storage.set('folders', folders);
-      }
-      state.folders = folders;
-      state.files = Storage.get('files', []);
-      state.events = Storage.get('events', []);
-      state.viewMode = Storage.get('viewMode', 'grid');
+    let currentUserId = null;
 
-      // Thème
+    async function initData() {
+      // Thème local (préférence navigateur)
       const savedTheme = Storage.get('theme', 'light');
       document.documentElement.setAttribute('data-theme', savedTheme);
+      state.viewMode = Storage.get('viewMode', 'grid');
+
+      // Auth anonyme Firebase
+      try {
+        await signInAnonymously(auth);
+      } catch (err) {
+        console.error('Auth anonyme échouée:', err);
+        showToast('Connexion au serveur échouée. Mode hors-ligne.', 'warning');
+      }
+
+      onAuthStateChanged(auth, user => {
+        if (user) {
+          currentUserId = user.uid;
+          setupRealtimeListeners();
+        }
+      });
+    }
+
+    // Écoute temps réel Firestore — synchronise entre tous les utilisateurs
+    function setupRealtimeListeners() {
+      // Dossiers
+      onSnapshot(collection(db, 'folders'), snapshot => {
+        state.folders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Si la collection est vide, injecter les dossiers par défaut
+        if (state.folders.length === 0) {
+          seedDefaultFolders();
+          return;
+        }
+        render();
+      }, err => {
+        console.error('Erreur Firestore (folders):', err);
+        showToast('Erreur de synchronisation des dossiers', 'error');
+      });
+
+      // Fichiers (métadonnées)
+      onSnapshot(collection(db, 'files'), snapshot => {
+        state.files = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+      }, err => {
+        console.error('Erreur Firestore (files):', err);
+      });
+
+      // Événements
+      onSnapshot(collection(db, 'events'), snapshot => {
+        state.events = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        render();
+      }, err => {
+        console.error('Erreur Firestore (events):', err);
+      });
+    }
+
+    // Injecter les 22 dossiers initiaux dans Firestore (une seule fois)
+    async function seedDefaultFolders() {
+      try {
+        for (const name of DEFAULT_FOLDERS) {
+          await addDoc(collection(db, 'folders'), {
+            name,
+            parentId: null,
+            createdAt: new Date().toISOString(),
+            createdBy: 'Système',
+          });
+        }
+      } catch (err) {
+        console.error('Erreur seed folders:', err);
+      }
     }
 
     // ===== TOAST NOTIFICATIONS =====
@@ -1694,41 +1767,51 @@
     ];
     const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
-    function handleFiles(fileList) {
+    async function handleFiles(fileList) {
       const filesArray = Array.from(fileList);
       let uploaded = 0;
+      let errors = 0;
 
-      filesArray.forEach(file => {
+      for (const file of filesArray) {
         if (file.size > MAX_FILE_SIZE) {
           showToast(`${file.name} dépasse 25 MB`, 'error');
-          return;
+          errors++;
+          continue;
         }
 
-        // Validation laxiste sur le type pour l'upload local
-        const reader = new FileReader();
-        reader.onload = () => {
-          const newFile = {
-            id: generateId(),
+        try {
+          showToast(`Upload de ${file.name}...`, 'info');
+
+          // Upload vers Firebase Storage
+          const fileId = generateId();
+          const storageRef = ref(storage, `uploads/${state.currentFolder}/${fileId}_${file.name}`);
+          await uploadBytes(storageRef, file);
+          const downloadURL = await getDownloadURL(storageRef);
+
+          // Sauvegarder les métadonnées dans Firestore
+          await addDoc(collection(db, 'files'), {
             name: file.name,
             folderId: state.currentFolder,
             size: file.size,
             type: file.type || 'application/octet-stream',
             uploadedAt: new Date().toISOString(),
-            uploadedBy: 'Étudiant',
-            data: reader.result,  // base64 data URL
-          };
-          state.files.push(newFile);
-          Storage.set('files', state.files);
-          uploaded++;
+            uploadedBy: currentUserId || 'Anonyme',
+            storageUrl: downloadURL,
+            storagePath: `uploads/${state.currentFolder}/${fileId}_${file.name}`,
+          });
 
-          if (uploaded === filesArray.length) {
-            showToast(`${uploaded} fichier${uploaded > 1 ? 's' : ''} uploadé${uploaded > 1 ? 's' : ''}`, 'success');
-            announce(`${uploaded} fichier${uploaded > 1 ? 's' : ''} uploadé${uploaded > 1 ? 's' : ''}`);
-            render();
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+          uploaded++;
+        } catch (err) {
+          console.error(`Erreur upload ${file.name}:`, err);
+          showToast(`Erreur pour ${file.name}`, 'error');
+          errors++;
+        }
+      }
+
+      if (uploaded > 0) {
+        showToast(`${uploaded} fichier${uploaded > 1 ? 's' : ''} uploadé${uploaded > 1 ? 's' : ''}`, 'success');
+        announce(`${uploaded} fichier${uploaded > 1 ? 's' : ''} uploadé${uploaded > 1 ? 's' : ''}`);
+      }
     }
 
     // ===== TÉLÉCHARGEMENT =====
@@ -1736,11 +1819,14 @@
     function downloadFile(fileId) {
       const file = state.files.find(f => f.id === fileId);
       if (!file) return;
-      const a = document.createElement('a');
-      a.href = file.data;
-      a.download = file.name;
-      a.click();
-      showToast(`Téléchargement de ${file.name}`, 'success');
+
+      if (file.storageUrl) {
+        // Ouvrir le lien Firebase Storage dans un nouvel onglet
+        window.open(file.storageUrl, '_blank');
+        showToast(`Téléchargement de ${file.name}`, 'success');
+      } else {
+        showToast('URL de téléchargement indisponible', 'error');
+      }
     }
 
     async function downloadFolderAsZip() {
@@ -1757,13 +1843,17 @@
         return;
       }
 
-      showToast('Compression en cours...', 'info');
+      showToast('Téléchargement et compression en cours...', 'info');
       const zip = new JSZip();
 
       for (const file of filesInFolder) {
-        // Extraire les données base64 du data URL
-        const base64 = file.data.split(',')[1];
-        zip.file(file.name, base64, { base64: true });
+        try {
+          const response = await fetch(file.storageUrl);
+          const blob = await response.blob();
+          zip.file(file.name, blob);
+        } catch (err) {
+          console.error(`Erreur fetch ${file.name}:`, err);
+        }
       }
 
       const blob = await zip.generateAsync({ type: 'blob' });
@@ -1938,68 +2028,39 @@
         </div>
 
         <div class="settings-card">
-          <h3>GitHub API (optionnel)</h3>
+          <h3>Stockage Firebase</h3>
           <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-4)">
-            Configurez un Personal Access Token pour sauvegarder les fichiers sur GitHub et permettre la collaboration.
-            Sans token, les données sont stockées localement dans votre navigateur.
+            Les données sont synchronisées en temps réel via Firebase. Tous les utilisateurs disposant du lien voient les mêmes fichiers et événements.
           </p>
-          <div class="form-group">
-            <label class="form-label" for="github-token">Personal Access Token</label>
-            <input class="form-input" id="github-token" type="password" placeholder="ghp_xxxxxxxxxxxx" value="${escapeHtml(Storage.get('github_pat', ''))}" />
+          <div style="display:flex; align-items:center; gap:var(--space-2); padding:var(--space-3); background:rgba(34,197,94,0.08); border-radius:var(--radius-md); border:1px solid rgba(34,197,94,0.2);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+            <span style="font-size:var(--text-sm); color:var(--color-success);">Connecté — ${state.folders.length} dossiers, ${state.files.length} fichiers, ${state.events.length} événements</span>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="github-repo">Repository (owner/repo)</label>
-            <input class="form-input" id="github-repo" type="text" placeholder="MoJoop/Doc_Adepp" value="${escapeHtml(Storage.get('github_repo', 'MoJoop/Doc_Adepp'))}" />
-          </div>
-          <button class="btn btn-primary" id="btn-save-github">Enregistrer la configuration</button>
         </div>
 
         <div class="settings-card">
           <h3>Données</h3>
           <p style="color:var(--color-text-muted); font-size:var(--text-sm); margin-bottom:var(--space-4)">
-            Gérer les données locales de l'application.
+            Exporter ou gérer les données de la plateforme.
           </p>
           <div style="display:flex; gap:var(--space-3); flex-wrap:wrap;">
             <button class="btn btn-outline" id="btn-export-data">Exporter les données</button>
-            <button class="btn btn-outline" id="btn-import-data">Importer des données</button>
-            <button class="btn btn-danger" id="btn-reset-data">Réinitialiser</button>
           </div>
-          <input type="file" id="import-data-input" accept=".json" hidden />
         </div>
       `;
 
-      // Event listeners pour les settings
       document.getElementById('theme-select').addEventListener('change', e => {
         document.documentElement.setAttribute('data-theme', e.target.value);
         Storage.set('theme', e.target.value);
       });
 
-      document.getElementById('btn-save-github').addEventListener('click', () => {
-        Storage.set('github_pat', document.getElementById('github-token').value);
-        Storage.set('github_repo', document.getElementById('github-repo').value);
-        showToast('Configuration GitHub sauvegardée', 'success');
-      });
-
       document.getElementById('btn-export-data').addEventListener('click', exportData);
-      document.getElementById('btn-import-data').addEventListener('click', () => document.getElementById('import-data-input').click());
-      document.getElementById('import-data-input').addEventListener('change', importData);
-      document.getElementById('btn-reset-data').addEventListener('click', async () => {
-        const confirmed = await showConfirm('Réinitialiser ?', 'Toutes les données locales seront supprimées. Cette action est irréversible.');
-        if (confirmed) {
-          Storage.remove('folders');
-          Storage.remove('files');
-          Storage.remove('events');
-          initData();
-          render();
-          showToast('Données réinitialisées', 'success');
-        }
-      });
     }
 
     function exportData() {
       const data = {
         folders: state.folders,
-        files: state.files.map(f => ({ ...f, data: undefined })),  // Exclure les données binaires
+        files: state.files.map(f => ({ ...f })),
         events: state.events,
         exportedAt: new Date().toISOString(),
       };
@@ -2011,24 +2072,6 @@
       a.click();
       URL.revokeObjectURL(url);
       showToast('Données exportées', 'success');
-    }
-
-    function importData(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const data = JSON.parse(reader.result);
-          if (data.folders) { state.folders = data.folders; Storage.set('folders', data.folders); }
-          if (data.events) { state.events = data.events; Storage.set('events', data.events); }
-          render();
-          showToast('Données importées avec succès', 'success');
-        } catch {
-          showToast('Fichier invalide', 'error');
-        }
-      };
-      reader.readAsText(file);
     }
 
     // ===== SIDEBAR FOLDERS =====
@@ -2092,7 +2135,7 @@
       openModal('modal-add-event');
     }
 
-    function saveEvent() {
+    async function saveEvent() {
       const title = document.getElementById('event-title-input').value.trim();
       const type = document.getElementById('event-type-select').value;
       const startDate = document.getElementById('event-start-date').value;
@@ -2105,43 +2148,42 @@
       if (!title) { showToast('Le titre est requis', 'error'); return; }
       if (!startDate) { showToast('La date de début est requise', 'error'); return; }
 
-      if (state.editingEventId) {
-        // Mise à jour
-        const idx = state.events.findIndex(e => e.id === state.editingEventId);
-        if (idx >= 0) {
-          state.events[idx] = { ...state.events[idx], title, type, startDate, endDate, startTime, endTime, folderId, description };
+      const eventData = { title, type, startDate, endDate, startTime, endTime, folderId, description };
+
+      try {
+        if (state.editingEventId) {
+          await setDoc(doc(db, 'events', state.editingEventId), eventData, { merge: true });
+          showToast('Événement modifié', 'success');
+        } else {
+          eventData.createdBy = currentUserId || 'Anonyme';
+          eventData.createdAt = new Date().toISOString();
+          await addDoc(collection(db, 'events'), eventData);
+          showToast('Événement créé', 'success');
         }
-        showToast('Événement modifié', 'success');
-      } else {
-        // Création
-        state.events.push({
-          id: generateId(),
-          title, type, startDate, endDate, startTime, endTime,
-          description, folderId,
-          createdBy: 'Étudiant',
-          createdAt: new Date().toISOString(),
-        });
-        showToast('Événement créé', 'success');
+      } catch (err) {
+        console.error('Erreur sauvegarde événement:', err);
+        showToast('Erreur lors de la sauvegarde', 'error');
       }
 
-      Storage.set('events', state.events);
       closeModal('modal-add-event');
       state.editingEventId = null;
-      render();
     }
 
-    function deleteEvent(eventId) {
-      state.events = state.events.filter(e => e.id !== eventId);
-      Storage.set('events', state.events);
-      showToast('Événement supprimé', 'success');
+    async function deleteEvent(eventId) {
+      try {
+        await deleteDoc(doc(db, 'events', eventId));
+        showToast('Événement supprimé', 'success');
+      } catch (err) {
+        console.error('Erreur suppression événement:', err);
+        showToast('Erreur lors de la suppression', 'error');
+      }
       closeModal('modal-add-event');
       state.editingEventId = null;
-      render();
     }
 
     // ===== GESTION DES DOSSIERS =====
 
-    function createFolder() {
+    async function createFolder() {
       const nameInput = document.getElementById('folder-name-input');
       const name = nameInput.value.trim();
       const validation = validateName(name);
@@ -2158,20 +2200,21 @@
         return;
       }
 
-      state.folders.push({
-        id: generateId(),
-        name,
-        parentId,
-        createdAt: new Date().toISOString(),
-        createdBy: 'Étudiant',
-      });
-
-      Storage.set('folders', state.folders);
-      closeModal('modal-create-folder');
-      nameInput.value = '';
-      showToast(`Dossier "${name}" créé`, 'success');
-      announce(`Dossier ${name} créé`);
-      render();
+      try {
+        await addDoc(collection(db, 'folders'), {
+          name,
+          parentId,
+          createdAt: new Date().toISOString(),
+          createdBy: currentUserId || 'Anonyme',
+        });
+        closeModal('modal-create-folder');
+        nameInput.value = '';
+        showToast(`Dossier "${name}" créé`, 'success');
+        announce(`Dossier ${name} créé`);
+      } catch (err) {
+        console.error('Erreur création dossier:', err);
+        showToast('Erreur lors de la création du dossier', 'error');
+      }
     }
 
     async function deleteFolder(folderId) {
@@ -2185,17 +2228,26 @@
       );
       if (!confirmed) return;
 
-      state.files = state.files.filter(f => f.folderId !== folderId);
-      state.folders = state.folders.filter(f => f.id !== folderId);
-      Storage.set('folders', state.folders);
-      Storage.set('files', state.files);
+      try {
+        // Supprimer les fichiers du dossier (Storage + Firestore)
+        for (const file of filesInFolder) {
+          if (file.storagePath) {
+            try { await deleteObject(ref(storage, file.storagePath)); } catch {}
+          }
+          await deleteDoc(doc(db, 'files', file.id));
+        }
+        // Supprimer le dossier
+        await deleteDoc(doc(db, 'folders', folderId));
 
-      if (state.currentFolder === folderId) {
-        state.currentFolder = null;
+        if (state.currentFolder === folderId) {
+          state.currentFolder = null;
+        }
+        showToast(`Dossier "${folder.name}" supprimé`, 'success');
+        render();
+      } catch (err) {
+        console.error('Erreur suppression dossier:', err);
+        showToast('Erreur lors de la suppression', 'error');
       }
-
-      showToast(`Dossier "${folder.name}" supprimé`, 'success');
-      render();
     }
 
     async function deleteFile(fileId) {
@@ -2205,10 +2257,18 @@
       const confirmed = await showConfirm('Supprimer le fichier ?', `"${file.name}" sera supprimé définitivement.`);
       if (!confirmed) return;
 
-      state.files = state.files.filter(f => f.id !== fileId);
-      Storage.set('files', state.files);
-      showToast(`Fichier "${file.name}" supprimé`, 'success');
-      render();
+      try {
+        // Supprimer de Firebase Storage
+        if (file.storagePath) {
+          try { await deleteObject(ref(storage, file.storagePath)); } catch {}
+        }
+        // Supprimer les métadonnées Firestore
+        await deleteDoc(doc(db, 'files', fileId));
+        showToast(`Fichier "${file.name}" supprimé`, 'success');
+      } catch (err) {
+        console.error('Erreur suppression fichier:', err);
+        showToast('Erreur lors de la suppression', 'error');
+      }
     }
 
     // ===== GESTION GLOBALE DES ÉVÉNEMENTS (delegation) =====
